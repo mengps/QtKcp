@@ -27,15 +27,24 @@ public:
 
     void disconnectToHost();
 
+    QHostAddress peerAddress() const;
+
+    quint16 peerPort() const;
+
     bool isConnected() const;
 
     void *kcpHandle() const;
 
+    int waitSentCount() const;
+
     virtual qint64 bytesAvailable() const override;
 
+protected:
     virtual qint64 readData(char *data, qint64 maxlen) override;
 
     virtual qint64 writeData(const char *data, qint64 len) override;
+
+    void timerEvent(QTimerEvent *event) override;
 
 signals:
     void connected();
