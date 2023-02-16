@@ -13,7 +13,6 @@ public:
     bool m_isListening = false;
     QUdpSocket *m_udpSocket = nullptr;
     QQueue<QKcpSocket *> m_pendingQueue;
-    QHash<quint32, QKcpSocket *> m_clients;
 };
 
 QKcpServer::QKcpServer(QObject *parent)
@@ -27,25 +26,20 @@ QKcpServer::QKcpServer(QObject *parent)
         Q_D(QKcpServer);
         while (d->m_udpSocket->hasPendingDatagrams()) {
             auto datagram = d->m_udpSocket->receiveDatagram();
+            if (!datagram.isValid()) return;
+
             auto data = datagram.data();
             auto kcpConv = ikcp_getconv(data.constData());
-            if (!d->m_clients.contains(kcpConv)) {
-                auto socket = new QKcpSocket(QKcpSocket::Mode::Normal);
-                socket->d_func()->m_kcpConv = kcpConv;
-                socket->open(QIODevice::ReadWrite);
-                socket->connectToHost(datagram.senderAddress(), datagram.senderPort());
-                if (socket->d_func()->m_kcpContext) {
-                    ikcp_input(socket->d_func()->m_kcpContext, data.constData(), data.size());
-                    connect(socket, &QKcpSocket::destroyed, this, [d, kcpConv]{
-                        d->m_clients.remove(kcpConv);
-                    }, Qt::QueuedConnection);
-                    d->m_clients[kcpConv] = socket;
-                    d->m_pendingQueue.enqueue(socket);
-                    emit newConnection();
-                } else {
-                    qWarning() << "The client connection failed:" << socket->errorString();
-                    socket->deleteLater();
-                }
+            auto socket = new QKcpSocket;
+            socket->d_func()->m_kcpConv = kcpConv;
+            socket->connectToHost(datagram.senderAddress(), datagram.senderPort());
+            if (socket->d_func()->m_kcpContext) {
+                ikcp_input(socket->d_func()->m_kcpContext, data.constData(), data.size());
+                d->m_pendingQueue.enqueue(socket);
+                emit newConnection();
+            } else {
+                qWarning() << "The client connection failed:" << socket->errorString();
+                socket->deleteLater();
             }
         }
     });
@@ -94,4 +88,5 @@ void QKcpServer::close()
     Q_D(QKcpServer);
 
     d->m_udpSocket->abort();
+    d->m_isListening = false;
 }
