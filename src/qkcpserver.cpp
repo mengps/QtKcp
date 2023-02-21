@@ -87,6 +87,6 @@ void QKcpServer::close()
 {
     Q_D(QKcpServer);
 
-    d->m_udpSocket->abort();
+    d->m_udpSocket->close();
     d->m_isListening = false;
 }

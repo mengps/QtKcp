@@ -23,7 +23,7 @@ public:
     explicit QKcpSocket(Mode mode = Mode::Default, QObject *parent = nullptr);
     ~QKcpSocket();
 
-    void connectToHost(const QHostAddress &address, qint16 port);
+    void connectToHost(const QHostAddress &address, quint16 port);
 
     void disconnectToHost();
 

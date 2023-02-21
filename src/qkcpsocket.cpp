@@ -25,11 +25,11 @@ QKcpSocket::~QKcpSocket()
 {
     Q_D(QKcpSocket);
 
-    d->m_udpSocket->abort();
+    d->m_udpSocket->close();
     d->_release_kcp();
 }
 
-void QKcpSocket::connectToHost(const QHostAddress &address, qint16 port)
+void QKcpSocket::connectToHost(const QHostAddress &address, quint16 port)
 {
     Q_D(QKcpSocket);
 
@@ -39,13 +39,12 @@ void QKcpSocket::connectToHost(const QHostAddress &address, qint16 port)
     d->m_hostPort = d->m_connectionPort = port;
     d->m_firstChange = true;
 
-    d->m_isBinded = d->m_udpSocket->bind();
+    d->m_isBinded = d->m_udpSocket->bind(QHostAddress::Any);
 
     if (d->m_isBinded) {
         d->m_kcpContext = ikcp_create(d->m_kcpConv, d);
         d->m_kcpContext->output = QKcpSocketPrivate::udp_output;
-        /*
-        d->m_kcpContext->writelog = kcp_log;
+        //d->m_kcpContext->writelog = kcp_log;
         d->m_kcpContext->logmask = IKCP_LOG_OUTPUT
                 | IKCP_LOG_INPUT
                 | IKCP_LOG_SEND
@@ -58,9 +57,11 @@ void QKcpSocket::connectToHost(const QHostAddress &address, qint16 port)
                 | IKCP_LOG_OUT_ACK
                 | IKCP_LOG_OUT_PROBE
                 | IKCP_LOG_OUT_WINS;
-        */
+
         ikcp_wndsize(d->m_kcpContext, 128, 128);
+
         ikcp_setmtu(d->m_kcpContext, 1400);
+
         d->m_kcpMaxSendSize = d->m_kcpContext->mtu * (d->m_kcpContext->snd_wnd - 4);
 
         if (d->m_mode == Mode::Default) {
@@ -113,7 +114,7 @@ void QKcpSocket::disconnectToHost()
 
     if (d->m_isBinded) {
         QIODevice::close();
-        d->m_udpSocket->abort();
+        d->m_udpSocket->close();
         d->_release_kcp();
         d->m_updateTimer.stop();
         disconnect(d->m_udpSocket, &QUdpSocket::readyRead, nullptr, nullptr);
