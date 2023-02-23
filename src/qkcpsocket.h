@@ -20,12 +20,12 @@ public:
         Fast
     };
 
-    explicit QKcpSocket(Mode mode = Mode::Default, QObject *parent = nullptr);
+    explicit QKcpSocket(Mode mode = Mode::Default, quint32 kcpConv = 1000, QObject *parent = nullptr);
     ~QKcpSocket();
 
     void connectToHost(const QHostAddress &address, quint16 port);
 
-    void disconnectToHost();
+    void disconnectFromHost();
 
     QHostAddress peerAddress() const;
 
@@ -49,10 +49,14 @@ protected:
 signals:
     void connected();
     void disconnected();
+    void deleteFromHost(const QHostAddress &address, quint16 port, QPrivateSignal);
 
 private:
+    QKcpSocket(quint32 kcpConv, const QHostAddress &address, quint16 port);
+
     Q_DISABLE_COPY(QKcpSocket)
     Q_PRIVATE_SLOT(d_func(), void _kcp_update());
+    Q_PRIVATE_SLOT(d_func(), void _read_udp_data());
 
     QScopedPointer<QKcpSocketPrivate> d_ptr;
     Q_DECLARE_PRIVATE(QKcpSocket);
