@@ -4,8 +4,16 @@
 
 #include <QDebug>
 #include <QQueue>
-#include <QNetworkDatagram>
-#include <QUdpSocket>
+#include <QMutex>
+
+static void registerAllType()
+{
+    static bool registered = false;
+    if (!registered) {
+        qRegisterMetaType<QHostAddress>("QHostAddress");
+        registered = true;
+    }
+}
 
 class QKcpServerPrivate
 {
@@ -13,6 +21,9 @@ public:
     bool m_isListening = false;
     QUdpSocket *m_udpSocket = nullptr;
     QQueue<QKcpSocket *> m_pendingQueue;
+    QMutex m_clientsMutex;
+    QHash<QPair<QHostAddress, quint16>, QKcpSocket *> m_clients;
+    QBasicTimer m_updateTimer;
 };
 
 QKcpServer::QKcpServer(QObject *parent)
@@ -21,7 +32,10 @@ QKcpServer::QKcpServer(QObject *parent)
 {
     Q_D(QKcpServer);
 
+    registerAllType();
+
     d->m_udpSocket = new QUdpSocket(this);
+    d->m_updateTimer.start(10, this);
     connect(d->m_udpSocket, &QUdpSocket::readyRead, this, [this]{
         Q_D(QKcpServer);
         while (d->m_udpSocket->hasPendingDatagrams()) {
@@ -29,17 +43,33 @@ QKcpServer::QKcpServer(QObject *parent)
             if (!datagram.isValid()) return;
 
             auto data = datagram.data();
+            auto address = datagram.senderAddress();
+            auto port = datagram.senderPort();
             auto kcpConv = ikcp_getconv(data.constData());
-            auto socket = new QKcpSocket;
-            socket->d_func()->m_kcpConv = kcpConv;
-            socket->connectToHost(datagram.senderAddress(), datagram.senderPort());
-            if (socket->d_func()->m_kcpContext) {
-                ikcp_input(socket->d_func()->m_kcpContext, data.constData(), data.size());
-                d->m_pendingQueue.enqueue(socket);
-                emit newConnection();
+            auto key = qMakePair<QHostAddress, quint16>(datagram.senderAddress(), datagram.senderPort());
+
+            if (d->m_clients.contains(key)) {
+                /*! TODO */
             } else {
-                qWarning() << "The client connection failed:" << socket->errorString();
-                socket->deleteLater();
+                QKcpSocket *socket = new QKcpSocket(kcpConv, address, port);
+                connect(socket, &QKcpSocket::deleteFromHost, this, [d](const QHostAddress &address, quint16 port){
+                    QMutexLocker locker(&d->m_clientsMutex);
+                    d->m_clients.remove(qMakePair<QHostAddress, quint16>(address, port));
+                    qDebug() << "deleteFromHost" << qMakePair<QHostAddress, quint16>(address, port)
+                             << Qt::endl << d->m_clients.keys();
+                }, Qt::DirectConnection);
+                if (socket->d_func()->m_kcpContext) {
+                    d->m_clientsMutex.lock();
+                    d->m_clients[key] = socket;
+                    d->m_clientsMutex.unlock();
+                    d->m_pendingQueue.enqueue(socket);
+                    ikcp_input(socket->d_func()->m_kcpContext, data.constData(), data.size());
+
+                    emit newConnection();
+                } else {
+                    qWarning() << "The client connection failed:" << socket->errorString();
+                    socket->deleteLater();
+                }
             }
         }
     });
@@ -89,4 +119,15 @@ void QKcpServer::close()
 
     d->m_udpSocket->close();
     d->m_isListening = false;
+}
+
+void QKcpServer::timerEvent(QTimerEvent *)
+{
+    Q_D(QKcpServer);
+
+    /*! 统一更新 KCP */
+    QMutexLocker locker(&d->m_clientsMutex);
+    for (auto &client: d->m_clients) {
+        QMetaObject::invokeMethod(client, "_kcp_update", Qt::QueuedConnection);
+    }
 }

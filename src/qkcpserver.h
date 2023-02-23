@@ -30,6 +30,9 @@ public:
 signals:
     void newConnection();
 
+protected:
+    void timerEvent(QTimerEvent *) override;
+
 private:
     Q_DISABLE_COPY(QKcpServer);
 
