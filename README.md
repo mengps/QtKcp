@@ -8,6 +8,29 @@
 
 ----
 
+### 如何构建
+
+克隆仓库
+
+```bash
+  git clone https://github.com/mengps/QtKcp && cd QtKcp
+  git submodule update --init
+```
+`cmake` 构建:
+
+```cmake
+  mkdir build && cd build
+  cmake ..
+  cmake --build .
+  cmake --install
+```
+
+`qmake` 构建:
+
+使用 `QtKcp.pro`
+
+---
+
 ### 如何使用
 
 Server 端：
@@ -46,4 +69,5 @@ Client 端：
 
 ### 开发环境
 
-  Windows 11，Qt 5.15.2
+  Windows 11，Qt 5.15.2 / Qt 6.7.3
+
