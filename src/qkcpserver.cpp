@@ -46,7 +46,7 @@ QKcpServer::QKcpServer(QObject *parent)
             auto address = datagram.senderAddress();
             auto port = datagram.senderPort();
             auto kcpConv = ikcp_getconv(data.constData());
-            auto key = qMakePair<QHostAddress, quint16>(datagram.senderAddress(), datagram.senderPort());
+            auto key = qMakePair(datagram.senderAddress(), datagram.senderPort());
 
             if (d->m_clients.contains(key)) {
                 /*! TODO */
@@ -54,8 +54,8 @@ QKcpServer::QKcpServer(QObject *parent)
                 QKcpSocket *socket = new QKcpSocket(kcpConv, address, port);
                 connect(socket, &QKcpSocket::deleteFromHost, this, [d](const QHostAddress &address, quint16 port){
                     QMutexLocker locker(&d->m_clientsMutex);
-                    d->m_clients.remove(qMakePair<QHostAddress, quint16>(address, port));
-                    qDebug() << "deleteFromHost" << qMakePair<QHostAddress, quint16>(address, port)
+                    d->m_clients.remove(qMakePair(address, port));
+                    qDebug() << "deleteFromHost" << qMakePair(address, port)
                              << Qt::endl << d->m_clients.keys();
                 }, Qt::DirectConnection);
                 if (socket->d_func()->m_kcpContext) {
