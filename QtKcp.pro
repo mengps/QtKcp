@@ -14,13 +14,15 @@ CONFIG += c++11
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+INCLUDEPATH += 3rdparty/kcp
+
 SOURCES += \
-    src/ikcp.c \
+    3rdparty/kcp/ikcp.c \
     src/qkcpserver.cpp \
     src/qkcpsocket.cpp
 
 HEADERS += \
-    src/ikcp.h \
+    3rdparty/kcp/ikcp.h \
     src/qkcpserver.h \
     src/qkcpsocket_global.h \
     src/qkcpsocket.h \
