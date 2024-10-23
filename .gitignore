@@ -37,6 +37,7 @@ target_wrapper.*
 
 # QtCreator
 *.autosave
+.qtc_clangd/
 
 # QtCreator Qml
 *.qmlproject.user
@@ -54,3 +55,4 @@ compile_commands.json
 debug/
 release/
 buildlib/
+build/
