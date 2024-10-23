@@ -67,13 +67,11 @@ public:
             /**
              * Fast mode
              * 第二个参数 nodelay 启用以后若干常规加速将启动
-             * 第三个参数 interval 为内部处理时钟，默认设置为 10ms
+             * 第三个参数 interval 为内部处理时钟，默认设置为10ms
              * 第四个参数 resend 为快速重传指标，设置为2
              * 第五个参数 nc 为是否禁用常规流控，这里禁止
              */
-            ikcp_nodelay(m_kcpContext, 0, 10, 2, 1);
-            m_kcpContext->rx_minrto = 10;
-            m_kcpContext->fastresend = 1;
+            ikcp_nodelay(m_kcpContext, 1, 10, 2, 1);
         }
     }
 
@@ -94,7 +92,7 @@ public:
         return ret;
     }
 
-    int _kcp_send(const char *data, long size)
+    int _kcp_send(const char *data, int size)
     {
         int ret = ikcp_send(m_kcpContext, data, size);
         _kcp_update();
